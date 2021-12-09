@@ -82,7 +82,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 		borneInf := 0
 		borneSup := 0
 		next_biggest_ack := last_ack+1 //<=> dernier plus grand ack recu + 1
-		winSize := 3
+		winSize := 2
 		seq_max := len(packets)
 
 		send := func(num_seq int){
@@ -193,11 +193,12 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 				} else {
 				//Sinon, si le temps de timeout du dernier + grand ack + 1 est supérieur à 900ms
 					//pour etre sur que le nba n'a pas change entre temps
+					
 					if time.Since(timeouts[next_biggest_ack])> time.Millisecond * 2000 {
 						//Timeout -> On retransmet le paquet perdu
 						fmt.Println("Timeout, retransmitting packet number", next_biggest_ack)
 						fmt.Println("Timeout: next_seq:", next_seq)
-						send(next_biggest_ack)
+						next_seq = next_biggest_ack
 					}	
 				}
 			}
