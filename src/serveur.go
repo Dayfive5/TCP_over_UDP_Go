@@ -18,7 +18,7 @@ func progression(next_biggest_ack *int, seq_max int) {
 	seq_max_float := float64(seq_max)
 	for *next_biggest_ack-1 < seq_max {
 		time.Sleep(time.Millisecond * 100)
-		fmt.Printf("\r [%2.0f%%] Waiting for ack #%d\n", 100*float64(*next_biggest_ack-1)/seq_max_float, *next_biggest_ack)
+		fmt.Printf("\r [%2.0f%%] #%d\n", 100*float64(*next_biggest_ack-1)/seq_max_float, *next_biggest_ack-1)
 	}
 }
 
@@ -82,7 +82,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 		borneInf := 0
 		borneSup := 0
 		next_biggest_ack := last_ack+1 //<=> dernier plus grand ack recu + 1
-		winSize := 2
+		winSize := 65
 		seq_max := len(packets)
 
 		send := func(num_seq int){
@@ -91,12 +91,12 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 				//Si c'est le dernier paquet : on envoie que la partie remplie du paquet
 				if num_seq == seq_max {
 					n := (int)(fi.Size()) - (int)((seq_max-1)*(chunkSize))
-					fmt.Println("Sending last packet number", num_seq)
+					//fmt.Println("Sending last packet number", num_seq)
 					//n+6 car il faut rajouter le header
 					_, err = conn.WriteToUDP(packets[num_seq-1][0:n+6], addr)
 				} else {
 					//Sinon on envoie le paquet
-					fmt.Println("Sending packet number", num_seq)
+					//fmt.Println("Sending packet number", num_seq)
 					_, err = conn.WriteToUDP(packets[num_seq-1], addr)
 				}
 				//On set le timeout pour ce paquet
@@ -139,7 +139,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 
 			//on calcule la borne supérieure de la fenêtre en ajoutant winSize-1 à la borne inf
 			borneSup = (borneInf + winSize - 1)
-			fmt.Printf("next_biggest_ack =%d borneInf=%d borneSup=%d\n", next_biggest_ack, borneInf, borneSup)
+			//fmt.Printf("next_biggest_ack =%d borneInf=%d borneSup=%d\n", next_biggest_ack, borneInf, borneSup)
 
 			//On retourne true si le # de paquet courant est compris dans les bornes de la fenêtre en cours   
 			if (next_seq >= borneInf) && (next_seq <= borneSup){
@@ -149,32 +149,12 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 			}
 		}
 
-		/*
-			if lost_ack == true {
-				borneInf = next_biggest_ack - 1
-				lost_ack = false
-			} else {
-				borneInf = (quotient * winSize) + 1
-			}
-
-			//on calcule la borne supérieure de la fenêtre en ajoutant winSize-1 à la borne inf
-			borneSup = (borneInf + winSize - 1)
-			fmt.Printf("next_biggest_ack =%d borneInf=%d borneSup=%d\n", next_biggest_ack, borneInf, borneSup)
-
-			//On retourne true si le # de paquet courant est compris dans les bornes de la fenêtre en cours (par rapport à next_biggest_ack)  
-			if (next_seq >= borneInf) && (next_seq <= borneSup){
-				return true
-			} else {
-			        return false
-			}
-		}*/
-
 		go func() {
 			//tant que le dernier plus grand ack + 1 inf au # du dernier paquet
 			for next_biggest_ack <= seq_max {
-				fmt.Println("-----------F117-------------")
-				fmt.Println("F117func next biggest ack", next_biggest_ack)
-				fmt.Println("F117func next seq", next_seq)
+				//fmt.Println("-----------F117-------------")
+				//fmt.Println("F117func next biggest ack", next_biggest_ack)
+				//fmt.Println("F117func next seq", next_seq)
 
 				//On attend 1ms
 				time.Sleep(time.Millisecond * 1)
@@ -183,7 +163,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 				if window() {
 					//On l'envoie
 					send(next_seq)
-					fmt.Println("F117func send next seq", next_seq)
+					//fmt.Println("F117func send next seq", next_seq)
 
 					//On passe au prochain paquet
 					//if next_seq < seq_max {
@@ -194,44 +174,45 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 				//Sinon, si le temps de timeout du dernier + grand ack + 1 est supérieur à 900ms
 					//pour etre sur que le nba n'a pas change entre temps
 					
-					if time.Since(timeouts[next_biggest_ack])> time.Millisecond * 2000 {
+					if time.Since(timeouts[next_biggest_ack])> time.Millisecond * 300 {
 						//Timeout -> On retransmet le paquet perdu
-						fmt.Println("Timeout, retransmitting packet number", next_biggest_ack)
-						fmt.Println("Timeout: next_seq:", next_seq)
+						//fmt.Println("Timeout, retransmitting packet number", next_biggest_ack)
+						//fmt.Println("Timeout: next_seq:", next_seq)
 						next_seq = next_biggest_ack
+						
 					}	
 				}
 			}
 
 		}()
 		//on affiche la progression en pourcentages de notre envoi
-		//go progression(&next_biggest_ack, seq_max)
+		go progression(&next_biggest_ack, seq_max)
 
 		//tant que le plus grand ack +1  inf au # du dernier paquet,
 		for next_biggest_ack <= seq_max {
 			//On lit l'ack recu
 			_, _, err := conn.ReadFromUDP(buf)
-			fmt.Println("ACK recu",string(buf))
+			//fmt.Println("ACK recu",string(buf))
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 			//on récupère le numéro de séquence
 			ack := getSeq(string(buf[3:9]))
-			fmt.Println("------------F143-----------")
-			fmt.Println("F143 ack:", ack)
-			fmt.Println("F143last ack:", last_ack)
-			fmt.Println("F143same ack:", same_ack)
-			fmt.Println("F143next biggest ack:", next_biggest_ack)
+			//fmt.Println("------------F143-----------")
+			//fmt.Println("F143 ack:", ack)
+			//fmt.Println("F143last ack:", last_ack)
+			//fmt.Println("F143same ack:", same_ack)
+			//fmt.Println("F143next biggest ack:", next_biggest_ack)
 
 			//Si c'est le meme ack qu'avant -> on incrémente same_ack
 			if ack == last_ack {
 				same_ack ++
 				//A partir d'un certain nombre d'ack identiques recus, on renvoie le paquet perdu
-				if same_ack > 0 {
-					next_seq = ack+1 //A TESTER SI MARCHE
+				//Fast retransmit
+				if same_ack > 2 {
+					next_seq = ack+1 
 					lost_ack = true
-					//send(ack + 1)
 					same_ack = 0
 				}
 			}
