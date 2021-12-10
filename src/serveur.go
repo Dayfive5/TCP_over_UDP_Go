@@ -86,7 +86,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 
 		//taille de nos buffers
 		segSize := 0      //taille du segment total (max 1024 octets)
-		chunkSize := 1018 //chunk de données à envoyer
+		chunkSize := 1494 //chunk de données à envoyer
 
 		//création d'un compteur pour compter nos paquets
 		count := 0
@@ -234,7 +234,7 @@ func handle(conn *net.UDPConn, addr *net.UDPAddr, sent map[string][]byte, toRese
 
 	for {
 		conn.SetReadDeadline(time.Now().Add(timeout))
-		buffACK := make([]byte, 1024)
+		buffACK := make([]byte, 1500)
 		n, _, err := conn.ReadFromUDP(buffACK)
 		//GESTION DES ERREURS (timeout ou autre erreur)
 		if err != nil {
@@ -321,7 +321,7 @@ func file(new_port int, addrStruct net.UDPAddr) {
 
 	fmt.Println("In file function ", addrStruct)
 	/*------OUVERTURE DE LA CONNEXION SUR LE NOUVEAU PORT------ */
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 1500)
 
 	add, err := net.ResolveUDPAddr("udp4", (":" + strconv.Itoa(new_port)))
 	if err != nil {
@@ -412,8 +412,8 @@ func main() {
 	}
 	defer connection.Close()
 
-	//On crée et initialise un objet buffer de type []byte et taille 1024
-	buffer := make([]byte, 1024)
+	//On crée et initialise un objet buffer de type []byte et taille 1500
+	buffer := make([]byte, 1500)
 	new_port := 1024 //on commence à 1024 et pas 1000 car les 1024 sont limités pour les utilisateurs normaux (non root par exemple)
 
 	//Création d'une map de connections ouvertes : clé = @ip:port_init ; valeur = new_port
