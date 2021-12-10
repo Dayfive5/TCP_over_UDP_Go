@@ -48,14 +48,16 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 		}
 		fmt.Println("The file is", fi.Size(), "bytes long")
 
-		nbseg := fi.Size()/1018
-		if (nbseg*1018 < fi.Size()){
+		//chunk de données à envoyer
+		chunkSize := 1494 
+
+		nbseg := int(fi.Size())/chunkSize
+		if (nbseg*chunkSize < int(fi.Size())){
 			nbseg = nbseg +1
 		}
 		fmt.Println(nbseg, "packet(s) to send")
 
-		//chunk de données à envoyer
-		chunkSize := 1018 
+		
 
 		//création d'un buffer
 		packets := make([][]byte, nbseg)
@@ -82,7 +84,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 		borneInf := 0
 		borneSup := 0
 		next_biggest_ack := last_ack+1 //<=> dernier plus grand ack recu + 1
-		winSize := 65
+		winSize := 85
 		seq_max := len(packets)
 
 		send := func(num_seq int){
