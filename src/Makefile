@@ -10,9 +10,9 @@ serveur3:
 	go build serveur3-LesTryhardeusesDuDimanche.go
 
 clean: 
-	rm serveur1-LesTryhardeusesDuDimanche.go
-	rm serveur2-LesTryhardeusesDuDimanche.go
-	rm serveur3-LesTryhardeusesDuDimanche.go
+	rm serveur1-LesTryhardeusesDuDimanche
+	rm serveur2-LesTryhardeusesDuDimanche
+	rm serveur3-LesTryhardeusesDuDimanche
 	go clean
 
 
