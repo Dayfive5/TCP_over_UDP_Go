@@ -167,7 +167,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 					//Sinon, si le temps de timeout du dernier + grand ack + 1 est supérieur à 300ms
 					//pour etre sur que le nba n'a pas change entre temps
 
-					if time.Since(timeouts[next_biggest_ack]) > time.Millisecond*300 {
+					if time.Since(timeouts[next_biggest_ack]) > time.Millisecond*200 {
 						//Timeout -> On retransmet le paquet perdu
 						//fmt.Println("Timeout, retransmitting packet number", next_biggest_ack)
 						//fmt.Println("Timeout: next_seq:", next_seq)
