@@ -291,8 +291,8 @@ func main() {
 	buffer := make([]byte, 1500)
 	new_port := 1024 //on commence à 1024 et pas 1000 car les 1024 sont limités pour les utilisateurs normaux (non root par exemple)
 
-	//Création d'une map de connections ouvertes : clé = port_init ; valeur = connexion
-	current_conn := make(map[int]*net.UDPConn)
+	//Création d'une map de connections ouvertes : clé = ip:port_init ; valeur = connexion
+	current_conn := make(map[string]*net.UDPConn)
 
 	for {
 
@@ -309,7 +309,7 @@ func main() {
 			- on vérifie que le client nous a envoyé un SYN
 			- si oui on ajoute l'adresse à la map
 			- sinon on s'en fiche de ce client */
-		} else if _, found := current_conn[addr.Port]; !found {
+		} else if _, found := current_conn[addr.String()]; !found {
 			fmt.Println("not good: ", addr)
 			if strings.Contains(string(buffer), "SYN") {
 
@@ -338,7 +338,7 @@ func main() {
 				}
 
 				defer conn.Close()
-				current_conn[addr.Port] = conn
+				current_conn[addr.String()] = conn
 
 				//Le serveur est pret : on envoie le SYN-ACK avec le nouveau port
 				_, _ = connection.WriteToUDP([]byte("SYN-ACK"+strconv.Itoa(new_port)), addr)
@@ -356,7 +356,7 @@ func main() {
 			fmt.Println("Three-way handshake established !")
 			fmt.Println("-------------------------------------")
 
-			go file(*current_conn[addr.Port], *addr)
+			go file(*current_conn[addr.String()], *addr)
 		}
 
 	}
