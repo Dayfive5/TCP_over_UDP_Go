@@ -299,7 +299,7 @@ func main() {
 			- si oui on ajoute l'adresse à la map
 			- sinon on s'en fiche de ce client */
 		} else if _, found := current_conn[addr.String()]; !found {
-			fmt.Println("not good: ", addr)
+
 			if strings.Contains(string(buffer), "SYN") {
 
 				//current_conn[addr.Port] = new_port //clé: addr ; valeur = current_conn[addr]
