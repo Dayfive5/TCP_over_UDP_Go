@@ -82,7 +82,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 		borneInf := 1
 		borneSup := 0
 		next_biggest_ack := last_ack + 1 //<=> dernier plus grand ack recu + 1
-		winSize := 85
+		winSize := 125
 		seq_max := len(packets)
 
 		send := func(num_seq int) {
@@ -132,7 +132,6 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 
 			//on calcule la borne supérieure de la fenêtre en ajoutant winSize-1 à la borne inf
 			borneSup = (borneInf + winSize - 1)
-			//fmt.Printf("next_biggest_ack =%d borneInf=%d borneSup=%d\n", next_biggest_ack, borneInf, borneSup)
 
 			//On retourne true si le # de paquet courant est compris dans les bornes de la fenêtre en cours
 			if (next_seq >= borneInf) && (next_seq <= borneSup) {
@@ -153,18 +152,16 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 				if window() {
 					//On l'envoie
 					send(next_seq)
-					//fmt.Println("F117func send next seq", next_seq)
 
 					//On passe au prochain paquet
 					//if next_seq < seq_max {
 					next_seq++
 
-					//fmt.Println("next-seq:",next_seq)
 				} else {
-					//Sinon, si le temps de timeout du dernier + grand ack + 1 est supérieur à 300ms
+					//Sinon, si le temps de timeout du dernier + grand ack + 1 est supérieur au timeout
 					//pour etre sur que le nba n'a pas change entre temps
 
-					if time.Since(timeouts[next_biggest_ack]) > time.Millisecond*200 {
+					if time.Since(timeouts[next_biggest_ack]) > time.Millisecond*500 {
 						//Timeout -> On retransmet le paquet perdu
 						next_seq = next_biggest_ack
 
@@ -302,9 +299,6 @@ func main() {
 
 			if strings.Contains(string(buffer), "SYN") {
 
-				//current_conn[addr.Port] = new_port //clé: addr ; valeur = current_conn[addr]
-
-				//new_udp_port := add_conn(addr, buffer, nbytes, connection, current_conn[addr])
 				fmt.Println("-------------------------------------")
 				fmt.Println("--------THREE-WAY HANDSHAKE----------")
 				fmt.Println("-------------------------------------")
