@@ -13,9 +13,9 @@ The client1 & client2 files are located in the src folder.
 
 ### Organization
 This repository contains the folder :
-- *bin*/ -- will contain 3 .exe files named serveurX-LesTryhardeusesDuDimanche, with X the number of the scenario
-- *src*/ -- contains all the source files of the project and will contain a Makefile that generates the 3 .exe files in bin
-- *pres*/ -- will contain the presentation of our project, in pdf
+- *bin*/ -- contains 3 .exe files named serveurX-LesTryhardeusesDuDimanche, with X the number of the scenario
+- *src*/ -- contains all the source files of the project and a Makefile that generates the 3 .exe files in bin
+- *pres*/ -- contains the presentation of our project, in pdf
 
 ### Usage
 To run the .exe server files you'll have to type in a terminal :
