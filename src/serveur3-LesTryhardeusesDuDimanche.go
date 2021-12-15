@@ -46,7 +46,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println("The file is", fi.Size(), "bytes long")
+		//fmt.Println("The file is", fi.Size(), "bytes long")
 
 		//chunk de données à envoyer
 		chunkSize := 1494
@@ -55,7 +55,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 		if nbseg*chunkSize < int(fi.Size()) {
 			nbseg = nbseg + 1
 		}
-		fmt.Println(nbseg, "packet(s) to send")
+		//fmt.Println(nbseg, "packet(s) to send")
 
 		//création d'un buffer
 		packets := make([][]byte, nbseg)
@@ -154,13 +154,10 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 					send(next_seq)
 
 					//On passe au prochain paquet
-					//if next_seq < seq_max {
 					next_seq++
 
 				} else {
-					//Sinon, si le temps de timeout du dernier + grand ack + 1 est supérieur au timeout
-					//pour etre sur que le nba n'a pas change entre temps
-
+					//Sinon, si le temps de timeout de l'ACK attendu est supérieur au timeout
 					if time.Since(timeouts[next_biggest_ack]) > time.Millisecond*150 {
 						//Timeout -> On retransmet le paquet perdu
 						next_seq = next_biggest_ack
@@ -170,7 +167,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 			}
 		}()
 		//on affiche la progression en pourcentages de notre envoi
-		go progression(&next_biggest_ack, seq_max)
+		//go progression(&next_biggest_ack, seq_max)
 
 		//tant que le plus grand ack +1  inf au # du dernier paquet,
 		for next_biggest_ack <= seq_max {
@@ -207,7 +204,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 
 			//Fin de l'envoi : on envoie "FIN" au client
 			if last_ack == seq_max {
-				fmt.Println("End of transfer")
+				//fmt.Println("End of transfer")
 				_, err = conn.WriteToUDP([]byte("FIN"), addr)
 			}
 		}
@@ -230,7 +227,7 @@ func file(connStruct net.UDPConn, addrStruct net.UDPAddr) {
 	buffer = buffer[:n-1]
 
 	fileName := string(buffer)
-	fmt.Println("Received message", n, "bytes:", fileName)
+	//fmt.Println("Received message", n, "bytes:", fileName)
 
 	/*--------------------ENVOYER LE FICHIER-------------------- */
 	sendFile(&connStruct, fileName, &addrStruct)
@@ -283,9 +280,9 @@ func main() {
 	for {
 
 		//On lit le message recu et on le met dans le buffer
-		nbytes, addr, err := connection.ReadFromUDP(buffer)
-		fmt.Println("adresse addr", addr)
-		fmt.Println("Buffer, ", string(buffer))
+		_, addr, err := connection.ReadFromUDP(buffer)
+		//fmt.Println("adresse addr", addr)
+		//fmt.Println("Buffer, ", string(buffer))
 
 		if err != nil { //Gestion en cas d'erreur
 			fmt.Println(err)
@@ -299,13 +296,13 @@ func main() {
 
 			if strings.Contains(string(buffer), "SYN") {
 
-				fmt.Println("-------------------------------------")
-				fmt.Println("--------THREE-WAY HANDSHAKE----------")
-				fmt.Println("-------------------------------------")
+				//fmt.Println("-------------------------------------")
+				//fmt.Println("--------THREE-WAY HANDSHAKE----------")
+				//fmt.Println("-------------------------------------")
 
 				//Si le message recu est un SYN
-				fmt.Print("Received message ", nbytes, " bytes: ", string(buffer), "\n")
-				fmt.Println("Sending SYN_ACK...")
+				//fmt.Print("Received message ", string(buffer), "\n")
+				//fmt.Println("Sending SYN_ACK...")
 
 				/*------OUVERTURE DE LA CONNEXION SUR LE NOUVEAU PORT------ */
 				add, err := net.ResolveUDPAddr("udp4", (":" + strconv.Itoa(new_port)))
@@ -335,9 +332,9 @@ func main() {
 
 		} else if strings.Contains(string(buffer), "ACK") { //on prend en compte les ACK que des clients connus (adresse présente dans la map)
 
-			fmt.Println("Received message", nbytes, "bytes :", string(buffer))
-			fmt.Println("Three-way handshake established !")
-			fmt.Println("-------------------------------------")
+			//fmt.Println("Received message :", string(buffer))
+			//fmt.Println("Three-way handshake established !")
+			//fmt.Println("-------------------------------------")
 
 			go file(*current_conn[addr.String()], *addr)
 		}
