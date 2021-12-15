@@ -216,7 +216,7 @@ func sendFile(conn *net.UDPConn, fileName string, addr *net.UDPAddr) {
 }
 
 // La goroutine file récupère le nom du fichier à envoyer et lance sa transmission en appelant sendFile
-func file(connStruct net.UDPConn, addrStruct net.UDPAddr) {
+func file(connStruct net.UDPConn, addrStruct net.UDPAddr, connectionChannel chan string) {
 
 	buffer := make([]byte, 1024)
 	/*---------------RECUPERER LE NOM DU FICHIER---------------- */
@@ -234,8 +234,8 @@ func file(connStruct net.UDPConn, addrStruct net.UDPAddr) {
 
 	/*--------------------ENVOYER LE FICHIER-------------------- */
 	sendFile(&connStruct, fileName, &addrStruct)
-
-	connStruct.Close() //une fois que le fichier est envoyé, on ferme la connexion
+	connStruct.Close()                       // Fermeture de la connexion
+	connectionChannel <- addrStruct.String() // On transmet au channel la connexion à enlever des connexions en cours
 }
 
 /*-------------------------------------------------------------- */
@@ -279,69 +279,75 @@ func main() {
 
 	//Création d'une map de connections ouvertes : clé = ip:port_init ; valeur = connexion
 	current_conn := make(map[string]*net.UDPConn)
+	closeConn := make(chan string)
 
 	for {
+		select {
+		// Si une connexion doit être fermée
+		case conn := <-closeConn:
+			delete(current_conn, conn)
+		// Sinon on écoute les nouvelles connexions
+		default:
+			//On lit le message recu et on le met dans le buffer
+			nbytes, addr, err := connection.ReadFromUDP(buffer)
+			fmt.Println("adresse addr", addr)
+			fmt.Println("Buffer, ", string(buffer))
 
-		//On lit le message recu et on le met dans le buffer
-		nbytes, addr, err := connection.ReadFromUDP(buffer)
-		fmt.Println("adresse addr", addr)
-		fmt.Println("Buffer, ", string(buffer))
+			if err != nil { //Gestion en cas d'erreur
+				fmt.Println(err)
+				return
 
-		if err != nil { //Gestion en cas d'erreur
-			fmt.Println(err)
-			return
+				/* si l'adresse de connexion n'est pas dans la map :
+				- on vérifie que le client nous a envoyé un SYN
+				- si oui on ajoute l'adresse à la map
+				- sinon on s'en fiche de ce client */
+			} else if _, found := current_conn[addr.String()]; !found {
 
-			/* si l'adresse de connexion n'est pas dans la map :
-			- on vérifie que le client nous a envoyé un SYN
-			- si oui on ajoute l'adresse à la map
-			- sinon on s'en fiche de ce client */
-		} else if _, found := current_conn[addr.String()]; !found {
+				if strings.Contains(string(buffer), "SYN") {
 
-			if strings.Contains(string(buffer), "SYN") {
+					fmt.Println("-------------------------------------")
+					fmt.Println("--------THREE-WAY HANDSHAKE----------")
+					fmt.Println("-------------------------------------")
 
+					//Si le message recu est un SYN
+					fmt.Print("Received message ", nbytes, " bytes: ", string(buffer), "\n")
+					fmt.Println("Sending SYN_ACK...")
+
+					/*------OUVERTURE DE LA CONNEXION SUR LE NOUVEAU PORT------ */
+					add, err := net.ResolveUDPAddr("udp4", (":" + strconv.Itoa(new_port)))
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+
+					conn, err := net.ListenUDP("udp4", add)
+					if err != nil {
+						fmt.Println(err)
+						return
+					}
+
+					defer conn.Close()
+					current_conn[addr.String()] = conn
+
+					//Le serveur est pret : on envoie le SYN-ACK avec le nouveau port
+					_, _ = connection.WriteToUDP([]byte("SYN-ACK"+strconv.Itoa(new_port)), addr)
+
+					new_port += 1 //on incrémente le new_port de 1 pour la prochaine connexion
+
+					if new_port == 9999 { //si on arrive à la fin de la plage de port, on reboucle au début de cette plage
+						new_port = 1024
+					}
+				}
+
+			} else if strings.Contains(string(buffer), "ACK") { //on prend en compte les ACK que des clients connus (adresse présente dans la map)
+
+				fmt.Println("Received message", nbytes, "bytes :", string(buffer))
+				fmt.Println("Three-way handshake established !")
 				fmt.Println("-------------------------------------")
-				fmt.Println("--------THREE-WAY HANDSHAKE----------")
-				fmt.Println("-------------------------------------")
 
-				//Si le message recu est un SYN
-				fmt.Print("Received message ", nbytes, " bytes: ", string(buffer), "\n")
-				fmt.Println("Sending SYN_ACK...")
-
-				/*------OUVERTURE DE LA CONNEXION SUR LE NOUVEAU PORT------ */
-				add, err := net.ResolveUDPAddr("udp4", (":" + strconv.Itoa(new_port)))
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-
-				conn, err := net.ListenUDP("udp4", add)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-
-				defer conn.Close()
-				current_conn[addr.String()] = conn
-
-				//Le serveur est pret : on envoie le SYN-ACK avec le nouveau port
-				_, _ = connection.WriteToUDP([]byte("SYN-ACK"+strconv.Itoa(new_port)), addr)
-
-				new_port += 1 //on incrémente le new_port de 1 pour la prochaine connexion
-
-				if new_port == 9999 { //si on arrive à la fin de la plage de port, on reboucle au début de cette plage
-					new_port = 1024
-				}
+				go file(*current_conn[addr.String()], *addr, closeConn)
 			}
-
-		} else if strings.Contains(string(buffer), "ACK") { //on prend en compte les ACK que des clients connus (adresse présente dans la map)
-
-			fmt.Println("Received message", nbytes, "bytes :", string(buffer))
-			fmt.Println("Three-way handshake established !")
-			fmt.Println("-------------------------------------")
-
-			go file(*current_conn[addr.String()], *addr)
 		}
-
 	}
 
 }
